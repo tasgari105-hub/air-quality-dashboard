@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Air Quality Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h1>Air Quality Dashboard</h1>
+
+<div class="card" id="card">
+
+    <h2 id="aqi"></h2>
+
+    <p id="status"></p>
+
+    <p id="source"></p>
+
+    <p id="warning"></p>
+
+    <hr>
+
+    <h3>Factories</h3>
+
+    <p id="factoryA"></p>
+    <p id="factoryB"></p>
+    <p id="factoryC"></p>
+
+</div>
+
+<br>
+
+<button onclick="reducePollution()">
+    Reduce Pollution
+</button>
+
+<br><br>
+
+<h3>Total AQI Chart</h3>
+<canvas id="aqiChart"></canvas>
+
+<h3>Factory A Chart</h3>
+<canvas id="factoryAChart"></canvas>
+
+<h3>Factory B Chart</h3>
+<canvas id="factoryBChart"></canvas>
+
+<h3>Factory C Chart</h3>
+<canvas id="factoryCChart"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="script.js"></script>
+
+</body>
+</html>
