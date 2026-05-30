@@ -1,57 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Air Quality Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Air Quality Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    }
+
+    .aqi {
+      font-size: 60px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    canvas {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 10px;
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>Air Quality Dashboard</h1>
+<div class="container">
 
-<div class="card" id="card">
+  <h1>🌍 Air Quality Dashboard</h1>
 
-    <h2 id="aqi"></h2>
+  <!-- CARD -->
+  <div class="card">
+    <h2>Current AQI</h2>
+    <div id="aqi" class="aqi">--</div>
+  </div>
 
-    <p id="status"></p>
-
-    <p id="source"></p>
-
-    <p id="warning"></p>
-
-    <hr>
-
-    <h3>Factories</h3>
-
-    <p id="factoryA"></p>
-    <p id="factoryB"></p>
-    <p id="factoryC"></p>
+  <!-- CHART -->
+  <div class="card">
+    <canvas id="chart"></canvas>
+  </div>
 
 </div>
 
-<br>
+<script>
+const API = "https://api-aqi.m-j-abg88.workers.dev"; // 👈 اینو عوض کن
 
-<button onclick="reducePollution()">
-    Reduce Pollution
-</button>
+let chart;
 
-<br><br>
+// -------------------- LIVE CARD --------------------
+async function loadLatest() {
+  try {
+    const res = await fetch(API + "/latest");
+    const data = await res.json();
 
-<h3>Total AQI Chart</h3>
-<canvas id="aqiChart"></canvas>
+    document.getElementById("aqi").innerText = data.nafas ?? "--";
+  } catch (err) {
+    console.log("Error loading latest", err);
+  }
+}
 
-<h3>Factory A Chart</h3>
-<canvas id="factoryAChart"></canvas>
+// -------------------- CHART --------------------
+async function loadChart() {
+  try {
+    const res = await fetch(API + "/history?limit=80");
+    const data = await res.json();
 
-<h3>Factory B Chart</h3>
-<canvas id="factoryBChart"></canvas>
+    const labels = data.map(d =>
+      new Date(d.created_at).toLocaleTimeString()
+    );
 
-<h3>Factory C Chart</h3>
-<canvas id="factoryCChart"></canvas>
+    const values = data.map(d => d.nafas);
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    if (chart) chart.destroy();
 
-<script src="script.js"></script>
+    chart = new Chart(document.getElementById("chart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "AQI",
+          data: values,
+          borderColor: "#38bdf8",
+          backgroundColor: "rgba(56,189,248,0.2)",
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: "#e2e8f0" } }
+        },
+        scales: {
+          x: { ticks: { color: "#94a3b8" } },
+          y: { ticks: { color: "#94a3b8" } }
+        }
+      }
+    });
+
+  } catch (err) {
+    console.log("Error loading chart", err);
+  }
+}
+
+// -------------------- AUTO UPDATE --------------------
+loadLatest();
+loadChart();
+
+setInterval(loadLatest, 3000);
+setInterval(loadChart, 5000);
+
+</script>
 
 </body>
 </html>
