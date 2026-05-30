@@ -1,143 +1,260 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Air Quality Dashboard</title>
+<meta charset="UTF-8">
+<title>Air Quality Control Panel</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0b1220;
+  color: white;
+}
 
-    .container {
-      max-width: 1000px;
-      margin: auto;
-      padding: 20px;
-    }
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 20px;
+}
 
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-    }
+/* ---------------- CARDS ---------------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
 
-    .card {
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      margin-bottom: 20px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    }
+.card {
+  background: #111827;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
 
-    .aqi {
-      font-size: 60px;
-      font-weight: bold;
-      color: #38bdf8;
-    }
+/* ---------------- BIG AQI ---------------- */
+.aqi-box {
+  text-align: center;
+  margin: 20px 0;
+}
 
-    canvas {
-      background: #1e293b;
-      border-radius: 12px;
-      padding: 10px;
-    }
-  </style>
+.aqi-value {
+  font-size: 60px;
+  font-weight: bold;
+}
+
+/* ---------------- PROGRESS BAR ---------------- */
+.bar {
+  width: 100%;
+  height: 25px;
+  background: #1f2937;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.fill {
+  height: 100%;
+  width: 0%;
+  transition: 0.5s;
+}
+
+/* COLORS */
+.green { background: #22c55e; }
+.yellow { background: #eab308; }
+.orange { background: #f97316; }
+.red { background: #ef4444; }
+.magenta { background: #d946ef; }
+.brown { background: #6b4f2a; }
+
+.status {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+canvas {
+  margin-top: 20px;
+  background: #111827;
+  border-radius: 10px;
+}
+</style>
 </head>
 
 <body>
 
 <div class="container">
 
-  <h1>🌍 Air Quality Dashboard</h1>
+<h1>🌍 Air Quality Industrial Monitor</h1>
 
-  <!-- CARD -->
-  <div class="card">
-    <h2>Current AQI</h2>
-    <div id="aqi" class="aqi">--</div>
+<!-- AQI -->
+<div class="aqi-box">
+  <div id="aqi" class="aqi-value">--</div>
+  <div class="status" id="status">Waiting...</div>
+
+  <div class="bar">
+    <div id="bar" class="fill green"></div>
+  </div>
+</div>
+
+<!-- SENSOR GRID -->
+<div class="grid">
+  <div class="card">PM<br><span id="pm">--</span></div>
+  <div class="card">CO<br><span id="co">--</span></div>
+  <div class="card">SO2<br><span id="so2">--</span></div>
+  <div class="card">NO2<br><span id="no2">--</span></div>
+</div>
+
+<!-- CHART -->
+<canvas id="chart"></canvas>
+
+</div>
+
+<!-- ================= FOOTER ================= -->
+<div style="
+  margin-top: 30px;
+  padding: 20px;
+  text-align: center;
+  background: #111827;
+  border-radius: 12px;
+  color: #94a3b8;
+">
+
+  <div style="font-size: 16px; margin-bottom: 8px;">
+    ساخته شده توسط <b style="color:#38bdf8;">T_J Friends</b>
   </div>
 
-  <!-- CHART -->
-  <div class="card">
-    <canvas id="chart"></canvas>
+  <div style="margin-bottom: 8px;">
+    نسخه سیستم: <b style="color:#e2e8f0;">YOUR_VERSION_HERE</b>
+  </div>
+
+  <div style="margin-bottom: 8px;">
+    ارتباط: 
+    <a href="mailto:tasgari105@gmail.com" style="color:#38bdf8; text-decoration:none;">
+      tasgari105@gmail.com
+    </a>
+  </div>
+
+  <div style="font-size: 12px; color:#64748b;">
+    Air Quality Monitoring System • Real-time IoT Dashboard
   </div>
 
 </div>
 
 <script>
-const API = "https://api-aqi.m-j-abg88.workers.dev"; // 👈 اینو عوض کن
+
+const API = "https://api-aqi.m-j-abg88.workers.dev";
 
 let chart;
 
-// -------------------- LIVE CARD --------------------
+// ---------------- STATUS ENGINE ----------------
+function getStatus(val) {
+
+  if (val >= 3367) {
+    return {
+      color: "brown",
+      text: "فوق اضطراری - آلودگی نامتعارف - اطلاع فوری به مراجع قضایی و مدیر کارخانه"
+    };
+  }
+  else if (val >= 2694) {
+    return {
+      color: "magenta",
+      text: "اضطراری - آلودگی خطرناک - اطلاع به مدیر و مراجع"
+    };
+  }
+  else if (val >= 2021) {
+    return {
+      color: "red",
+      text: "قرمز - آلودگی آسیب‌زا - نیاز به پیگیری فوری"
+    };
+  }
+  else if (val >= 1348) {
+    return {
+      color: "orange",
+      text: "هشدار - آلودگی قابل توجه"
+    };
+  }
+  else if (val >= 675) {
+    return {
+      color: "yellow",
+      text: "متوسط - وضعیت قابل قبول"
+    };
+  }
+  else {
+    return {
+      color: "green",
+      text: "سالم - وضعیت پایدار"
+    };
+  }
+}
+
+// ---------------- LIVE DATA ----------------
 async function loadLatest() {
-  try {
-    const res = await fetch(API + "/latest");
-    const data = await res.json();
 
-    document.getElementById("aqi").innerText = data.nafas ?? "--";
-  } catch (err) {
-    console.log("Error loading latest", err);
-  }
+  const res = await fetch(API + "/latest");
+  const d = await res.json();
+
+  if (!d.nafas) return;
+
+  document.getElementById("aqi").innerText = d.nafas;
+
+  document.getElementById("pm").innerText = d.pmvalue;
+  document.getElementById("co").innerText = d.covalue;
+  document.getElementById("so2").innerText = d.so2value;
+  document.getElementById("no2").innerText = d.NO2NH3value;
+
+  const s = getStatus(d.nafas);
+
+  document.getElementById("status").innerText = s.text;
+
+  // progress bar
+  const percent = Math.min((d.nafas / 4095) * 100, 100);
+
+  const bar = document.getElementById("bar");
+  bar.style.width = percent + "%";
+  bar.className = "fill " + s.color;
 }
 
-// -------------------- CHART --------------------
+// ---------------- CHART ----------------
 async function loadChart() {
-  try {
-    const res = await fetch(API + "/history?limit=80");
-    const data = await res.json();
 
-    const labels = data.map(d =>
-      new Date(d.created_at).toLocaleTimeString()
-    );
+  const res = await fetch(API + "/history?limit=60");
+  const data = await res.json();
 
-    const values = data.map(d => d.nafas);
+  const labels = data.map(x =>
+    new Date(x.created_at).toLocaleTimeString()
+  );
 
-    if (chart) chart.destroy();
+  const values = data.map(x => x.nafas);
 
-    chart = new Chart(document.getElementById("chart"), {
-      type: "line",
-      data: {
-        labels,
-        datasets: [{
-          label: "AQI",
-          data: values,
-          borderColor: "#38bdf8",
-          backgroundColor: "rgba(56,189,248,0.2)",
-          borderWidth: 2,
-          tension: 0.3,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { labels: { color: "#e2e8f0" } }
-        },
-        scales: {
-          x: { ticks: { color: "#94a3b8" } },
-          y: { ticks: { color: "#94a3b8" } }
-        }
-      }
-    });
+  if (chart) chart.destroy();
 
-  } catch (err) {
-    console.log("Error loading chart", err);
-  }
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "AQI",
+        data: values,
+        borderWidth: 2,
+        borderColor: "#38bdf8",
+        tension: 0.3
+      }]
+    }
+  });
 }
 
-// -------------------- AUTO UPDATE --------------------
+// ---------------- AUTO UPDATE ----------------
 loadLatest();
 loadChart();
 
-setInterval(loadLatest, 3000);
+setInterval(loadLatest, 2000);
 setInterval(loadChart, 5000);
 
 </script>
 
 </body>
 </html>
+
